@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conversation data editor</title>
+</head>
+<body>
+
+<div>
+  <button id="loadBtn" onclick="loadData()">Load</button>
+  <button id="sendBtn" onclick="sendData()">Send</button>
+  ID: <b id="currentId">-</b>
+  <span id="status"></span>
+</div>
+<hr>
+
+<h3>Conversation</h3>
+<div>
+  Mode: <input id="mode" type="text">
+  Model_tone: <input id="modelTone" type="text">
+</div>
+<br>
+<div id="convList"></div>
+<button onclick="addConvMsg()">+ Add conversation message</button>
+
+<hr>
+
+<h3>Message analyzed</h3>
+<div>
+  language: <input id="language" type="text">
+  type: <input id="type" type="text">
+</div>
+<br>
+<div id="msgList"></div>
+<button onclick="addAnalyzedMsg()">+ Add analyzed message</button>
+<br><br>
+<div>
+  conversation_tone: <input id="conversationTone" type="text"><br><br>
+  conversation_topic: <input id="conversationTopic" type="text" size="50"><br><br>
+  Me_tone: <input id="meTone" type="text"><br><br>
+  conversation_focus: <input id="conversationFocus" type="text" size="80">
+</div>
+
+<hr>
+<h3>Last sent payload</h3>
+<pre id="output"></pre>
+
+<script>
+/* =========================================================
+   API SETTINGS: put your two endpoints here
+   ========================================================= */
+var API_LOAD_URL = "http://127.0.0.1:8000/load_messages";   // API call 1: POST { "id": null or current id }
+                         //   returns { "id": 7, "conversation": {...}, "analysis": {...} }
+var API_SEND_URL = "http://127.0.0.1:8000/send_messages";   // API call 2: POST { "id": 7, "conversation": {...}, "analysis": {...} }
+
+/* Sample data used when API_LOAD_URL is empty, so you can test the page */
+var SAMPLE = {
+  conversation: {
+    Mode: "group",
+    Model_tone: "casual",
+    conversation: [
+      { speaker: "Riley", relationship: "Bestfriend", text: "OMG y\u2019all, I just got the movie tickets for the Marvel premiere! We\u2019re all going, right?" },
+      { speaker: "Me", relationship: "Me", text: "Wait, are we doing this *tomorrow*? I thought it was next week!" },
+      { speaker: "Jordan", relationship: "friend", text: "Duh, the first screening is tomorrow. You\u2019re literally the only one who forgot." }
+    ]
+  },
+  analysis: {
+    language: "english",
+    type: "group",
+    messages: [
+      { tone: "positive", message: "Hey, I\u2019ll bring the camera, this is gonna be legendary." },
+      { tone: "neutral", message: "Wait, are we all meeting at the theater or Riley\u2019s place first?" },
+      { tone: "supportive", message: "No way, the Hulk\u2019s roar is nothing. I\u2019ll bring my pillow." },
+      { tone: "negative", message: "Ugh, why does every plan change at the last minute?" }
+    ],
+    conversation_tone: "casual",
+    conversation_topic: "movie premiere planning",
+    Me_tone: "casual",
+    conversation_focus: "coordinating movie night details and confirming group plans"
+  }
+};
+
+function $(id) { return document.getElementById(id); }
+function setStatus(t) { $("status").textContent = t; }
+
+/* ---------- build rows ---------- */
+function addConvMsg(speaker, relationship, text) {
+  var d = document.createElement("div");
+  d.className = "convRow";
+  d.innerHTML =
+    'speaker: <input type="text" class="speaker" size="12"> ' +
+    'relationship: <input type="text" class="relationship" size="12"><br>' +
+    'text: <input type="text" class="text" size="100"> ' +
+    '<button onclick="this.parentNode.remove()">Remove</button><br><br>';
+  d.querySelector(".speaker").value = speaker || "";
+  d.querySelector(".relationship").value = relationship || "";
+  d.querySelector(".text").value = text || "";
+  $("convList").appendChild(d);
+}
+
+function addAnalyzedMsg(tone, message) {
+  var d = document.createElement("div");
+  d.className = "msgRow";
+  d.innerHTML =
+    'tone: <input type="text" class="tone" size="12"><br>' +
+    'message: <input type="text" class="message" size="100"> ' +
+    '<button onclick="this.parentNode.remove()">Remove</button><br><br>';
+  d.querySelector(".tone").value = tone || "";
+  d.querySelector(".message").value = message || "";
+  $("msgList").appendChild(d);
+}
+
+/* ---------- fill the form from data ---------- */
+function fillForm(data) {
+  var c = data.conversation || {};
+  var a = data.analysis || {};
+
+  $("mode").value = c.Mode || "";
+  $("modelTone").value = c.Model_tone || "";
+  $("convList").innerHTML = "";
+  (c.conversation || []).forEach(function (m) {
+    addConvMsg(m.speaker, m.relationship, m.text);
+  });
+
+  $("language").value = a.language || "";
+  $("type").value = a.type || "";
+  $("msgList").innerHTML = "";
+  (a.messages || []).forEach(function (m) {
+    addAnalyzedMsg(m.tone, m.message);
+  });
+  $("conversationTone").value = a.conversation_tone || "";
+  $("conversationTopic").value = a.conversation_topic || "";
+  $("meTone").value = a.Me_tone || "";
+  $("conversationFocus").value = a.conversation_focus || "";
+}
+
+/* ---------- read the form back into the same JSON shape ---------- */
+function readForm() {
+  var conv = [];
+  document.querySelectorAll(".convRow").forEach(function (r) {
+    conv.push({
+      speaker: r.querySelector(".speaker").value,
+      relationship: r.querySelector(".relationship").value,
+      text: r.querySelector(".text").value
+    });
+  });
+
+  var msgs = [];
+  document.querySelectorAll(".msgRow").forEach(function (r) {
+    msgs.push({
+      tone: r.querySelector(".tone").value,
+      message: r.querySelector(".message").value
+    });
+  });
+
+  return {
+    conversation: {
+      Mode: $("mode").value,
+      Model_tone: $("modelTone").value,
+      conversation: conv
+    },
+    analysis: {
+      language: $("language").value,
+      type: $("type").value,
+      messages: msgs,
+      conversation_tone: $("conversationTone").value,
+      conversation_topic: $("conversationTopic").value,
+      Me_tone: $("meTone").value,
+      conversation_focus: $("conversationFocus").value
+    }
+  };
+}
+
+/* ---------- Load button (API call 1) ---------- */
+var currentId = null;   // null on the first Load, then whatever the backend gives back
+
+async function loadData() {
+  setStatus("Loading...");
+  try {
+    var data;
+    if (API_LOAD_URL) {
+      // sends the id we currently have (null the first time)
+      var res = await fetch(API_LOAD_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: currentId })
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      data = await res.json();
+    } else {
+      // no API set yet: fake a backend that counts up
+      data = JSON.parse(JSON.stringify(SAMPLE));
+      data.id = (currentId || 0) + 1;
+    }
+    currentId = data.id;                    // id given by the backend
+    $("currentId").textContent = currentId; // shown at the top
+    fillForm(data);
+    setStatus("Loaded");
+  } catch (e) {
+    setStatus("Load failed: " + e.message);
+  }
+}
+
+/* ---------- Send button (API call 2) ---------- */
+async function sendData() {
+  var payload = readForm();
+  payload.id = currentId;
+  $("output").textContent = JSON.stringify(payload, null, 2);
+  setStatus("Sending...");
+  try {
+    if (API_SEND_URL) {
+      var res = await fetch(API_SEND_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      setStatus("Sent");
+    } else {
+      setStatus("No API_SEND_URL set, payload shown below only");
+    }
+  } catch (e) {
+    setStatus("Send failed: " + e.message);
+  }
+}
+</script>
+</body>
+</html>
