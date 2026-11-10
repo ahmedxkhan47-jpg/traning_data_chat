@@ -16,14 +16,15 @@ OUT_DIR.mkdir(exist_ok=True)
 
 FILES = {
     "english": {
-        "conv":     BASE / "new_english_conversations_dataset.jsonl",
-        "ana":      BASE / "new_english_analyed_dataset.jsonl",
+        "conv":     "D:/data_traning/new_traning_data/english_conversations.jsonl",
+        "ana":      "D:/data_traning/new_traning_data/english_analyzed.jsonl",
         "out_conv": OUT_DIR / "clean_english_conversations.jsonl",
         "out_ana":  OUT_DIR / "clean_english_analyed.jsonl",
     },
+
     "urdu": {
-        "conv":     BASE / "new_urdu_conversations_dataset.jsonl",
-        "ana":      BASE / "new_urdu_analyed_dataset.jsonl",
+        "conv":     "D:/data_traning/new_traning_data/urdu_conversations.jsonl",
+        "ana":      "D:/data_traning/new_traning_data/urdu_analyzed.jsonl",
         "out_conv": OUT_DIR / "clean_urdu_conversations.jsonl",
         "out_ana":  OUT_DIR / "clean_urdu_analyed.jsonl",
     },
@@ -573,14 +574,14 @@ def load_messages(req:LoadReq):
        element1=""
        element2=""
        
-       with open(CONV_FILE, "r", encoding="utf-8") as file:
+       with open("urdu_conversations.jsonl", "r", encoding="utf-8") as file:
          for i, line in enumerate(file):
            if i == iid:
             element1 = json.loads(line)
             print(element1)
             break
            
-       with open("message_Analyzeed_dataset.jsonl", "r", encoding="utf-8") as file:
+       with open("urdu_analyzed.jsonl", "r", encoding="utf-8") as file:
                 for i, line in enumerate(file):
                   if i == iid:
                    element2 = json.loads(line)
@@ -600,14 +601,14 @@ def load_messages(req:LoadReq):
        element1=""
        element2=""
        
-       with open(CONV_FILE, "r", encoding="utf-8") as file:
+       with open("urdu_conversations.jsonl", "r", encoding="utf-8") as file:
          for i, line in enumerate(file):
            if i == iid:
             element1 = json.loads(line)
             print(element1)
             break
            
-       with open("message_Analyzeed_dataset.jsonl", "r", encoding="utf-8") as file:
+       with open("urdu_analyzed.jsonl", "r", encoding="utf-8") as file:
                 for i, line in enumerate(file):
                   if i == iid:
                    element2 = json.loads(line)
